@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jeremy 數學偵探 V5.6</title>
+    <title>Jeremy 數學偵探 V5.6.1</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -38,7 +38,8 @@
             Refresh: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></svg>,
             Copy: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
             ClipboardCheck: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/></svg>,
-            Clock: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Clock: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+            ArrowRight: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
         };
 
         const QUESTION_TYPES = {
@@ -49,7 +50,8 @@
             MEASURE_COUNT: '自訂單位量度',
             VERTICAL: '直式填空',
             WORD_PROBLEM: '文字應用題',
-            TIME: '時間應用題'
+            TIME: '時間應用題',
+            TIME_DRAW: '互動撥時鐘'
         };
 
         const FOODS = ['🍎', '🍩', '🍞', '🧀', '🍌', '🍕', '🧁', '🍦'];
@@ -107,7 +109,10 @@
             const [startTime, setStartTime] = useState(0);
             const [endTime, setEndTime] = useState(0);
             const [questionCount, setQuestionCount] = useState(0);
-            const [currentQuestion, setCurrentQuestion] = useState(null);
+            
+            // 重要修正：加入 quizSet 狀態
+            const [quizSet, setQuizSet] = useState([]); 
+
             const [selectedAnswer, setSelectedAnswer] = useState(null);
             const [multiSelected, setMultiSelected] = useState([]);
             const [isCorrect, setIsCorrect] = useState(null);
@@ -121,10 +126,9 @@
 
             const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5);
 
-            // --- 核心：生成題目 ---
+            // --- 核心：一次性生成 15 條不重複題目 ---
             const generateQuizSet = () => {
                 let questions = [];
-
                 // 1-3. 位置 (Grid)
                 const grid1 = shuffle([...FOODS]);
                 const gridA = [grid1.slice(0,4), grid1.slice(4,8)];
@@ -137,20 +141,54 @@
                     correct: '右面'
                 });
 
-                // 4. 車隊 (多選)
-                const cars = shuffle([...CAR_COLORS]);
-                const targetCar = cars[1];
-                const answerCars = cars.slice(2).map(c => c.name);
+                const grid2 = shuffle([...FOODS]);
+                const gridB = [grid2.slice(0,4), grid2.slice(4,8)];
+                const rB = 0, cB = 2;
+                questions.push({
+                    type: QUESTION_TYPES.POSITION_GRID,
+                    text: `看看下圖食物櫃：${gridB[rB][cB]} 在 ${gridB[rB+1][cB]} 的哪一面？`,
+                    visual: { type: 'grid', data: gridB },
+                    options: ['左面', '右面', '上面', '下面'],
+                    correct: '上面'
+                });
+
+                const grid3 = shuffle([...FOODS]);
+                const gridC = [grid3.slice(0,4), grid3.slice(4,8)];
+                questions.push({
+                    type: QUESTION_TYPES.POSITION_GRID,
+                    text: `在 ${gridC[0][0]} 和 ${gridC[0][3]} 之間有多少個食物？`,
+                    visual: { type: 'grid', data: gridC },
+                    options: ['1', '2', '3'],
+                    correct: '2'
+                });
+
+                // 4. 車隊 (單選)
+                const cars1 = shuffle([...VEHICLES]);
+                const targetIdx = 1; 
+                const targetCar = cars1[targetIdx];
+                const frontCar = cars1[targetIdx-1];
                 questions.push({
                     type: QUESTION_TYPES.POSITION_CAR,
-                    text: `多選題：${targetCar.name} 的後面有哪些車？(請點選)`,
-                    visual: { type: 'cars', data: cars },
+                    text: `看看下圖：${targetCar.name} 在 ${frontCar.name} 的哪一邊？`,
+                    visual: { type: 'cars', data: cars1 },
+                    options: ['前面', '後面'],
+                    correct: '後面'
+                });
+
+                // 5. 車隊 (多選)
+                const cars2 = shuffle([...VEHICLES]);
+                const targetCar2 = cars2[1];
+                const answerCars = cars2.slice(2).map(c => c.name);
+                questions.push({
+                    type: QUESTION_TYPES.POSITION_CAR,
+                    text: `多選題：${targetCar2.name} 的後面有哪些車？(請點選)`,
+                    visual: { type: 'cars', data: cars2 },
                     isMulti: true,
-                    options: cars.map(c => c.name),
+                    options: cars2.map(c => c.name),
                     correct: answerCars
                 });
                 
-                // 5. 距離：單車比賽 (最遠)
+                // 6. 距離 (最遠)
                 const bike1 = shuffle([{n:'可晴', d:80}, {n:'柏康', d:30}, {n:'豪庭', d:60}]);
                 questions.push({
                     type: QUESTION_TYPES.DISTANCE_BIKE,
@@ -160,8 +198,32 @@
                     correct: bike1.reduce((prev, current) => (prev.d > current.d) ? prev : current).n
                 });
 
-                // 6. 量度：單位選擇
-                const items = [{n:'椅子', a:'鞋子', i:'🪑'}, {n:'擦膠', a:'萬字夾', i:'✏️'}];
+                // 7. 距離 (最近)
+                const bike2 = shuffle([{n:'可晴', d:70}, {n:'柏康', d:20}, {n:'豪庭', d:90}]);
+                questions.push({
+                    type: QUESTION_TYPES.DISTANCE_BIKE,
+                    text: "看圖中的單車比賽，誰距離「起點」最近？",
+                    visual: { type: 'bike', data: bike2 },
+                    options: bike2.map(b => b.n),
+                    correct: bike2.reduce((prev, current) => (prev.d < current.d) ? prev : current).n
+                });
+
+                // 8. 長度比較
+                const lines = [
+                    {c: 'bg-red-500', n: '紅色', w: 40}, 
+                    {c: 'bg-blue-500', n: '藍色', w: 90}, 
+                    {c: 'bg-green-500', n: '綠色', w: 60}
+                ];
+                questions.push({
+                    type: QUESTION_TYPES.LENGTH,
+                    text: "哪一條顏色線最長？",
+                    visual: { type: 'lines', data: lines },
+                    options: lines.map(l => l.n),
+                    correct: '藍色'
+                });
+
+                // 9. 量度單位
+                const items = [{n:'椅子', a:'鞋子', i:'🪑'}, {n:'擦膠', a:'萬字夾', i:'✏️'}, {n:'黑板', a:'長尺', i:'🏫'}];
                 const itemQ = items[Math.floor(Math.random() * items.length)];
                 questions.push({
                     type: QUESTION_TYPES.MEASURE_UNIT,
@@ -171,8 +233,8 @@
                     correct: itemQ.a
                 });
 
-                // 7. 量度：數萬字夾
-                const count = Math.floor(Math.random() * 3) + 4;
+                // 10. 量度讀數
+                const count = Math.floor(Math.random() * 4) + 3;
                 questions.push({
                     type: QUESTION_TYPES.MEASURE_COUNT,
                     text: "圖中的筆袋大約長多少個「萬字夾」？",
@@ -181,10 +243,10 @@
                     correct: count.toString()
                 });
 
-                // 8. 撥時鐘
+                // 11. 撥時鐘 (半)
                 const h1 = Math.floor(Math.random() * 12) + 1;
                 questions.push({
-                    type: QUESTION_TYPES.TIME,
+                    type: QUESTION_TYPES.TIME_DRAW,
                     text: `請撥動指針，畫出「${h1} 時半」。`,
                     visual: { type: 'draw' },
                     targetH: h1, targetM: 30,
@@ -192,19 +254,30 @@
                     correct: 'draw'
                 });
 
-                // 9. 時間應用：趕巴士
-                const startH = 8;
-                const dur = 4;
-                const busH = 12; // 12點
+                // 12. 撥時鐘 (正)
+                const h2 = Math.floor(Math.random() * 12) + 1;
                 questions.push({
-                    type: QUESTION_TYPES.TIME,
-                    text: `小明上午 ${startH} 時上學，${dur} 小時後放學。請問他能否趕上這班巴士？`,
-                    visual: { type: 'bus_check', h: busH },
-                    options: ['能', '不能'],
-                    correct: '能'
+                    type: QUESTION_TYPES.TIME_DRAW,
+                    text: `請撥動指針，畫出「${h2} 時正」。`,
+                    visual: { type: 'draw' },
+                    targetH: h2, targetM: 0,
+                    options: [],
+                    correct: 'draw'
                 });
 
-                // 10. 直式填空
+                // 13. 時間應用 (經過)
+                const startH = Math.floor(Math.random() * 5) + 1; 
+                const dur = Math.floor(Math.random() * 3) + 2; 
+                const endH = startH + dur;
+                questions.push({
+                    type: QUESTION_TYPES.TIME,
+                    text: `現在是 ${startH} 時，${dur} 小時後是幾時？`,
+                    visual: { type: 'clock_add', h: startH, add: dur },
+                    options: [`${endH}時`, `${endH+1}時`, `${endH-1}時`],
+                    correct: `${endH}時`
+                });
+
+                // 14. 直式 (進位)
                 const v1_o1 = 7, v1_t2 = 1;
                 questions.push({
                     type: QUESTION_TYPES.VERTICAL,
@@ -217,7 +290,7 @@
                     explanationSecond: `正確直式：27 + 15 = 42`
                 });
 
-                // 11. 文字應用題 (比較邏輯 - 找大)
+                // 15. 文字應用題 (逆向)
                 const valA = 16, diffA = 8;
                 questions.push({
                     type: QUESTION_TYPES.WORD_PROBLEM,
@@ -225,31 +298,18 @@
                     correctFirst: `${valA} + ${diffA}`,
                     correctSecond: (valA + diffA).toString(),
                     firstOptions: [`${valA} + ${diffA}`, `${valA} - ${diffA}`],
-                    secondOptions: shuffle([(valA+diffA).toString(), (valA-diffA).toString(), (valA+diffA+2).toString(), (valA+diffA-5).toString()]),
-                    explanationFirst: "小玲比子言多，所以小玲是大哥哥，用加法。",
+                    secondOptions: shuffle([(valA+diffA).toString(), (valA-diffA).toString(), (valA+diffA+2).toString()]),
                     explanationSecond: `算式：${valA} + ${diffA} = ${valA + diffA}`
-                });
-
-                 // 12. 文字應用題 (逆向邏輯)
-                const valC = 18, diffC = 4;
-                questions.push({
-                    type: QUESTION_TYPES.WORD_PROBLEM,
-                    text: `小明有車子 ${valC} 輛，小明比小華多 ${diffC} 輛。請問小華有多少輛車？`,
-                    correctFirst: `${valC} - ${diffC}`,
-                    correctSecond: (valC - diffC).toString(),
-                    firstOptions: [`${valC} + ${diffC}`, `${valC} - ${diffC}`],
-                    secondOptions: shuffle([(valC-diffC).toString(), (valC+diffC).toString(), (valC-diffC+2).toString(), (valC-diffC-3).toString()]),
-                    explanationFirst: "小明比小華多，即係小華比較少，要用減法。",
-                    explanationSecond: `算式：${valC} - ${diffC} = ${valC - diffC}`
                 });
 
                 return shuffle(questions);
             };
 
             const startGame = () => {
-                setQuizSet(generateQuizSet());
+                const qs = generateQuizSet();
+                setQuizSet(qs);
                 setScore(0);
-                setCurrentQuestionIndex(0);
+                setQuestionCount(0);
                 setStage('quiz');
                 setDrawHour(12); setDrawMinute(0);
                 setMultiSelected([]);
@@ -259,9 +319,11 @@
             };
 
             const handleAnswer = (ans) => {
-                const q = quizSet[currentQIndex];
+                // 安全檢查：確保 quizSet 已生成
+                if (!quizSet || quizSet.length === 0) return;
                 
-                // 直式 或 文字題 (兩步)
+                const q = quizSet[questionCount];
+                
                 if (q.type === QUESTION_TYPES.VERTICAL || q.type === QUESTION_TYPES.WORD_PROBLEM) {
                     if (subStep === 'first') {
                         const ok = ans === q.correctFirst;
@@ -274,7 +336,6 @@
                     return;
                 }
 
-                // 多選
                 if (q.isMulti) {
                     if (ans === 'confirm') {
                         const correctSet = q.correct.sort().join(',');
@@ -286,14 +347,12 @@
                     return;
                 }
 
-                // 撥時鐘
                 if (q.visual?.type === 'draw' && ans === 'confirm') {
                     const isOk = drawHour === q.targetH && drawMinute === q.targetM;
                     finish(isOk, true);
                     return;
                 }
 
-                // 單選
                 if (ans !== 'confirm') {
                     finish(ans === q.correct, true);
                 }
@@ -309,8 +368,9 @@
                 if (finalOk) setScore(s => s + 1);
                 
                 // 加入歷史紀錄
+                const q = quizSet[questionCount];
                 setHistory(prev => [...prev, {
-                    ...quizSet[currentQIndex],
+                    ...q,
                     userAnswer: typeof ans === 'boolean' ? (finalOk ? '正確' : '錯誤') : ans,
                     isCorrect: finalOk
                 }]);
@@ -319,11 +379,11 @@
             };
 
             const nextQ = () => {
-                if (currentQIndex >= quizSet.length - 1) {
+                if (questionCount >= quizSet.length - 1) {
                     setEndTime(Date.now());
                     setStage('result');
                 } else {
-                    setCurrentQuestionIndex(p => p + 1);
+                    setQuestionCount(p => p + 1);
                     setSelectedAnswer(null);
                     setShowRationale(false);
                     setIsCorrect(null);
@@ -385,6 +445,7 @@
                         {data.flat().map((v, i) => <div key={i} className="aspect-square bg-white rounded-xl flex items-center justify-center text-4xl shadow-sm">{v}</div>)}
                     </div>
                 );
+
                 if (type === 'cars') return (
                     <div className="relative pt-8 pb-2">
                         <div className="flex justify-between px-4 mb-2 text-slate-500 font-black text-xs">
@@ -403,6 +464,7 @@
                         </div>
                     </div>
                 );
+
                 if (type === 'bike') return (
                     <div className="relative h-48 bg-white rounded-2xl border-2 border-dashed border-slate-300 p-4 overflow-hidden">
                         <div className="absolute left-6 top-0 bottom-0 w-1 bg-green-500 z-10"></div>
@@ -416,6 +478,7 @@
                         ))}
                     </div>
                 );
+
                 if (type === 'lines') return (
                     <div className="space-y-6 p-6 bg-white rounded-2xl border">
                         {data.map((l, i) => (
@@ -426,7 +489,9 @@
                         ))}
                     </div>
                 );
+
                 if (type === 'unit') return <div className="text-8xl p-10 bg-indigo-50 rounded-3xl flex justify-center shadow-inner">{q.visual.icon}</div>;
+                
                 if (type === 'count') return (
                     <div className="flex flex-col items-center gap-4 p-6 bg-white rounded-2xl border">
                         <div className="w-full h-12 bg-blue-100 rounded-lg flex items-center px-4 border-2 border-blue-200">
@@ -440,6 +505,7 @@
                         <p className="text-sm text-slate-400">↑ 萬字夾 ↑</p>
                     </div>
                 );
+
                 if (type === 'draw') return (
                     <div className="flex flex-col items-center">
                         <ClockFace h={drawHour} m={drawMinute} color="#6366f1" />
@@ -449,6 +515,7 @@
                         </div>
                     </div>
                 );
+
                 if (type === 'clock_add') return (
                     <div className="flex items-center justify-center gap-4 text-2xl font-black text-indigo-700 bg-indigo-50 p-6 rounded-3xl">
                         <ClockFace h={q.visual.h} m={0} size={80} />
@@ -461,16 +528,18 @@
                         <div className="w-20 h-20 border-4 border-dashed border-indigo-300 rounded-full flex items-center justify-center text-indigo-300">?</div>
                     </div>
                 );
+
                 if (type === 'bus_check') return (
                     <div className="flex flex-col items-center">
                         <ClockFace h={q.visual.h} m={0} color="#dc2626" />
                         <div className="bg-red-100 text-red-600 px-4 py-1 rounded-full text-xs font-bold mt-2">巴士開出時間</div>
                     </div>
                 );
+
                 return null;
             };
 
-            const q = quizSet[currentQIndex];
+            const q = quizSet[questionCount];
 
             return (
                 <div className="min-h-screen p-4 flex flex-col items-center">
@@ -479,7 +548,7 @@
                             <Icon.Trophy className="text-amber-400 mx-auto mb-6 animate-bounce w-24 h-24" />
                             <h2 className="text-3xl font-black mb-4 text-slate-800">全方位數學大冒險</h2>
                             <p className="text-slate-500 font-bold mb-10 leading-relaxed">
-                                V5.6 報告強化版<br/>文字應用題、直式填空、單車賽跑！
+                                V5.6.1 穩定版<br/>文字應用題、直式填空、單車賽跑！
                             </p>
                             <button onClick={startGame} className="w-full bg-indigo-600 text-white py-6 rounded-3xl text-2xl font-black shadow-xl active:scale-95 transition-all">開始挑戰</button>
                         </div>
@@ -489,7 +558,7 @@
                         <div className="w-full max-w-xl space-y-6">
                             <header className="flex justify-between items-center bg-white p-4 rounded-3xl shadow-sm">
                                 <div className="font-black text-slate-400 uppercase tracking-widest text-sm">Question</div>
-                                <div className="bg-indigo-600 text-white px-4 py-1 rounded-full font-black text-lg">{currentQIndex + 1} / {quizSet.length}</div>
+                                <div className="bg-indigo-600 text-white px-4 py-1 rounded-full font-black text-lg">{questionCount + 1} / {quizSet.length}</div>
                             </header>
 
                             <div className="bg-white p-8 rounded-[3rem] shadow-md border border-slate-200">
@@ -517,8 +586,9 @@
                                         </div>
                                     ) : (
                                         q.options.map((opt, i) => (
-                                            <button key={i} onClick={() => handleAnswer(opt)} disabled={showRationale} className={`p-6 text-xl font-black rounded-3xl border-4 transition-all text-left ${showRationale && opt === q.correct ? 'border-green-500 bg-green-50' : 'border-slate-100 bg-slate-50 hover:border-indigo-300'}`}>
+                                            <button key={i} onClick={() => handleAnswer(opt)} disabled={showRationale} className={`p-6 text-xl font-black rounded-3xl border-4 transition-all text-left flex justify-between items-center ${selectedAnswer === opt ? (isCorrect ? 'border-green-500 bg-green-50' : 'border-red-500 bg-red-50') : 'border-slate-100 bg-slate-50 hover:border-indigo-200'}`}>
                                                 {opt}
+                                                {selectedAnswer === opt && (isCorrect ? <Icon.Check /> : <Icon.Alert />)}
                                             </button>
                                         ))
                                     )}
@@ -526,13 +596,13 @@
                             </div>
 
                             {showRationale && (
-                                <div className={`p-8 rounded-[2.5rem] shadow-2xl border-l-[12px] animate-in slide-in-from-bottom-8 duration-500 ${isCorrect ? 'bg-green-50 border-green-500' : 'bg-rose-50 border-rose-500'}`}>
+                                <div className={`p-8 rounded-[2.5rem] shadow-2xl border-l-[12px] animate-in slide-in-from-bottom-8 duration-500 ${isCorrect ? 'bg-green-50 border-green-500 text-green-800' : 'bg-rose-50 border-rose-500 text-rose-800'}`}>
                                     <div className="flex gap-4 items-center mb-4">
                                         {isCorrect ? <Icon.Check /> : <Icon.Alert />}
                                         <h4 className={`font-black text-2xl ${isCorrect ? 'text-green-800' : 'text-rose-800'}`}>{isCorrect ? '答對了！' : '再接再厲！'}</h4>
                                     </div>
                                     <p className="text-lg font-bold mb-6 text-slate-600 italic">
-                                        {q.explanationSecond || q.explanationFirst || `正確答案是：${Array.isArray(q.correct) ? q.correct.join('、') : q.correct}`}
+                                        {q.explanationSecond || `正確答案是：${Array.isArray(q.correct) ? q.correct.join('、') : q.correct}`}
                                     </p>
                                     <button onClick={nextQ} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-xl flex items-center justify-center gap-2 shadow-xl active:scale-95">下一題 <Icon.Next /></button>
                                 </div>
@@ -546,7 +616,7 @@
                             <h2 className="text-4xl font-black mb-4 text-slate-800">特訓完成！</h2>
                             <div className="flex justify-center gap-4 mb-8 text-slate-500 font-bold">
                                 <span>時間：{Math.floor((Date.now() - startTime) / 1000)}s</span>
-                                <span>得分：{Math.round((score / quizSet.length) * 100)}</span>
+                                <span>得分：{quizSet.length > 0 ? Math.round((score / quizSet.length) * 100) : 0}</span>
                             </div>
                             
                             <button 
