@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jeremy 數學偵探 V5.4</title>
+    <title>Jeremy 數學偵探 V5.4.1</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
         body { 
@@ -28,7 +27,7 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
         
-        // --- 圖標組件 ---
+        // --- 圖標組件 (已修復 Missing Icon) ---
         const Icon = {
             Search: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
             Trophy: ({className}) => <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>,
@@ -37,7 +36,7 @@
             Alert: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
             Next: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
             Refresh: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></svg>,
-            Flag: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            ArrowRight: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
         };
 
         const FOODS = ['🍎', '🍩', '🍞', '🧀', '🍌', '🍕', '🧁', '🍦'];
@@ -77,7 +76,6 @@
             const [isCorrect, setIsCorrect] = useState(null);
             const [showRationale, setShowRationale] = useState(false);
             
-            // 互動時鐘狀態
             const [drawHour, setDrawHour] = useState(12);
             const [drawMinute, setDrawMinute] = useState(0);
 
@@ -124,7 +122,7 @@
 
                 // 4. 車隊：前後 (單選)
                 const cars1 = shuffle([...CAR_COLORS]);
-                const targetIdx = Math.floor(Math.random() * 2) + 1; // 1 or 2 (middle)
+                const targetIdx = Math.floor(Math.random() * 2) + 1; // 1 or 2
                 const targetCar = cars1[targetIdx];
                 const frontCar = cars1[targetIdx-1];
                 questions.push({
@@ -137,8 +135,8 @@
 
                 // 5. 車隊：多選 (後面有誰)
                 const cars2 = shuffle([...CAR_COLORS]);
-                const targetCar2 = cars2[1]; // 假設綠車在第二位
-                const answerCars = cars2.slice(2).map(c => c.name); // 後面兩架
+                const targetCar2 = cars2[1];
+                const answerCars = cars2.slice(2).map(c => c.name);
                 questions.push({
                     type: '車子排列 (多選)',
                     text: `多選題：${targetCar2.name} 的後面有哪些車？(請點選)`,
@@ -194,7 +192,7 @@
                 });
 
                 // 10. 量度：數萬字夾
-                const count = Math.floor(Math.random() * 4) + 3; // 3-6
+                const count = Math.floor(Math.random() * 4) + 3;
                 questions.push({
                     type: '量度讀數',
                     text: "圖中的筆袋大約長多少個「萬字夾」？",
@@ -210,7 +208,7 @@
                     text: `請撥動指針，畫出「${h1} 時半」。`,
                     visual: { type: 'draw' },
                     targetH: h1, targetM: 30,
-                    options: [], // 互動題無選項
+                    options: [],
                     correct: 'draw'
                 });
 
@@ -225,9 +223,9 @@
                     correct: 'draw'
                 });
 
-                // 13. 時間：經過時間 (簡單)
-                const startH = Math.floor(Math.random() * 5) + 1; // 1-5
-                const dur = Math.floor(Math.random() * 3) + 2; // 2-4
+                // 13. 時間：經過時間
+                const startH = Math.floor(Math.random() * 5) + 1;
+                const dur = Math.floor(Math.random() * 3) + 2;
                 const endH = startH + dur;
                 questions.push({
                     type: '時間應用',
@@ -237,10 +235,10 @@
                     correct: `${endH}時`
                 });
 
-                // 14. 時間：趕巴士 (應用題)
+                // 14. 時間：趕巴士
                 const schoolH = 8;
                 const schoolDur = 4;
-                const busH = 12; // 剛好趕上
+                const busH = 12;
                 questions.push({
                     type: '時間應用',
                     text: `上午 ${schoolH} 時上學，${schoolDur} 小時後放學。能趕上 ${busH} 時開出的巴士嗎？`,
@@ -249,7 +247,7 @@
                     correct: '能'
                 });
 
-                // 15. 直式：進位加法
+                // 15. 直式
                 const v1 = Math.floor(Math.random() * 20) + 15;
                 const v2 = Math.floor(Math.random() * 8) + 3;
                 questions.push({
@@ -260,7 +258,7 @@
                     correct: (v1+v2).toString()
                 });
 
-                return shuffle(questions); // 最後打亂次序
+                return shuffle(questions);
             };
 
             const startGame = () => {
@@ -275,7 +273,6 @@
             const handleAnswer = (ans) => {
                 const q = quizSet[currentQIndex];
                 
-                // 處理多選
                 if (q.isMulti) {
                     if (ans === 'confirm') {
                         const correctSet = q.correct.sort().join(',');
@@ -287,14 +284,12 @@
                     return;
                 }
 
-                // 處理撥時鐘
                 if (q.visual.type === 'draw' && ans === 'confirm') {
                     const isOk = drawHour === q.targetH && drawMinute === q.targetM;
                     finish(isOk);
                     return;
                 }
 
-                // 普通單選
                 if (ans !== 'confirm') {
                     finish(ans === q.correct);
                 }
@@ -319,7 +314,6 @@
                 }
             };
 
-            // 視覺渲染組件
             const VisualArea = ({ q }) => {
                 const { type, data } = q.visual;
                 
@@ -402,12 +396,12 @@
                 if (type === 'clock_add') return (
                     <div className="flex items-center justify-center gap-4 text-2xl font-black text-indigo-700 bg-indigo-50 p-6 rounded-3xl">
                         <ClockFace h={q.visual.h} m={0} size={80} />
-                        <ArrowRight />
+                        <Icon.ArrowRight />
                         <div className="text-center">
                             <div className="text-sm text-slate-400">經過</div>
                             <div>{q.visual.add} 小時</div>
                         </div>
-                        <ArrowRight />
+                        <Icon.ArrowRight />
                         <div className="w-20 h-20 border-4 border-dashed border-indigo-300 rounded-full flex items-center justify-center text-indigo-300">?</div>
                     </div>
                 );
