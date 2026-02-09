@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jeremy 數學偵探 V7.0 - 究極完全版</title>
+    <title>Jeremy 數學偵探 V7.1 - 數字卡片修正版</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -39,15 +39,12 @@
             MoveRight: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/></svg>
         };
 
-        // --- 題目類型定義 (整合舊版 + 新錯誤針對版) ---
         const QUESTION_TYPES = {
-            // 原有題型
             COMPARISON: '比較邏輯',
             FILTERING: '資訊篩選',
             VERTICAL_FILL: '直式填格',
             TIME_APP: '時鐘應用',
             TIME_DRAW: '互動撥鐘',
-            // 新增題型 (針對 Jeremy 錯誤)
             HORIZONTAL: '橫式陷阱',      
             CARD_SORT: '數字卡片',       
             HIDDEN_EACH: '「各」字應用',   
@@ -61,9 +58,8 @@
             CLOTHING: ['長袖衫', '短袖衫', '長褲', '短褲', '外套']
         };
 
-        const TOTAL_QUESTIONS = 20; // 增加題數以容納新題型
+        const TOTAL_QUESTIONS = 20;
 
-        // --- 子組件：直式排版 (原有) ---
         const VerticalDisplay = ({ data, subStep, selectedAnswer }) => (
             <div className="flex justify-center my-8 font-mono scale-110">
                 <div className="grid grid-cols-[3rem_4rem_4rem] items-center text-5xl leading-none text-slate-700">
@@ -85,7 +81,6 @@
             </div>
         );
 
-        // --- 子組件：時鐘 (通用) ---
         const ClockFace = ({ h, m, color = "#1e293b" }) => {
             const hourAngle = (h * 30) + (m * 0.5);
             const minuteAngle = m * 6;
@@ -104,7 +99,6 @@
             );
         };
 
-        // --- 主應用程式 ---
         const App = () => {
             const [currentStep, setCurrentStep] = useState('menu'); 
             const [score, setScore] = useState(0);
@@ -127,7 +121,6 @@
             const initSequence = () => {
                 const types = Object.values(QUESTION_TYPES);
                 let seq = [];
-                // 每個類型出 2 題，共 20 題
                 types.forEach(type => { seq.push(type, type); });
                 return shuffle(seq);
             };
@@ -137,11 +130,9 @@
                 const names = shuffle(['小明', '子言', '小玲', '家嘉', '子賢', '小丁']);
                 let q = { type, id: Date.now() };
 
-                // 預設為一步完成，特殊題型再改為 'first'
                 setSubStep('second'); 
 
                 switch (type) {
-                    // --- 原有題型 ---
                     case QUESTION_TYPES.COMPARISON: {
                         const cat = Object.values(CATEGORIES)[Math.floor(Math.random() * 2)];
                         const item = cat[Math.floor(Math.random() * cat.length)];
@@ -237,8 +228,6 @@
                         q.secondOptions = shuffle(Array.from(opts));
                         break;
                     }
-
-                    // --- 新增題型 (針對 Jeremy 錯誤) ---
                     case QUESTION_TYPES.HORIZONTAL: {
                         const t1 = Math.floor(Math.random() * 4) + 5; 
                         const o1 = Math.floor(Math.random() * 8) + 1; 
@@ -252,23 +241,83 @@
                         q.secondOptions = shuffle([q.correctSecond, q.correctSecond - 10, q.correctSecond + 2, (t1-t2)*10 + (o1+o2)]);
                         break;
                     }
+                    
+                    // --- 修改後的數字卡片題型 ---
                     case QUESTION_TYPES.CARD_SORT: {
-                        const subType = Math.random() > 0.5 ? 'largest_odd' : 'smallest_even';
-                        if (subType === 'largest_odd') {
-                            const cards = shuffle(['87', '21', '七', '52', '四', '一']);
-                            q.text = `從 ${cards.join('，')} 中，選出最大的「兩位單數」。`;
-                            q.correctSecond = 87;
-                            q.secondOptions = shuffle([87, 21, 52, 7]);
-                            q.explanationSecond = `「七」只是一位數，「52」是雙數。最大的「兩位單數」是 87。`;
+                        // 1. 決定卡片數量 (4 至 8 張)
+                        const count = Math.floor(Math.random() * 5) + 4; // 4, 5, 6, 7, 8
+                        
+                        // 2. 決定題型：選數 (Selection) 或 組數 (Formation)
+                        const subType = Math.random() > 0.5 ? 'selection' : 'formation';
+
+                        if (subType === 'selection') {
+                            // 題目：從列表中選出最大的兩位單數
+                            let candidates = [];
+                            // 確保至少有一個答案 (兩位單數)
+                            const target = Math.floor(Math.random() * 40) * 2 + 11; // 11-89 的單數
+                            candidates.push(target);
+                            
+                            // 填充其他干擾數字 (純阿拉伯數字)
+                            while(candidates.length < count) {
+                                let n = Math.floor(Math.random() * 99) + 1;
+                                if (!candidates.includes(n)) candidates.push(n);
+                            }
+                            candidates = shuffle(candidates);
+                            
+                            // 計算正確答案
+                            const valids = candidates.filter(n => n >= 10 && n % 2 !== 0);
+                            const correct = Math.max(...valids);
+                            
+                            q.text = `請從以下數字卡中，選出「最大」的「兩位單數」：\n\n${candidates.join('， ')}`;
+                            q.correctSecond = correct;
+                            q.explanationSecond = `我們要找「兩位數」而且是「單數」。在這些數字中，${correct} 是最大的兩位單數。`;
+                            
+                            // 選項生成
+                            let opts = new Set([correct]);
+                            while(opts.size < 4) {
+                                let rand = candidates[Math.floor(Math.random() * candidates.length)];
+                                if(rand !== correct) opts.add(rand);
+                                if(opts.size < 4) opts.add(Math.floor(Math.random() * 90) + 10);
+                            }
+                            q.secondOptions = shuffle(Array.from(opts));
+
                         } else {
-                            const digits = shuffle([1, 4, 7]);
-                            q.text = `用 ${digits.map(d=>['一','四','七'][d===1?0:d===4?1:2]).join('，')} 三張卡，組成「最小」的「兩位雙數」。`;
-                            q.correctSecond = 14;
-                            q.secondOptions = shuffle([14, 17, 41, 74]);
-                            q.explanationSecond = `要雙數，個位必須是「四」(4)。14 比 74 小。`;
+                            // 題目：用數字卡組成最小的兩位雙數
+                            let digits = [];
+                            // 確保能組成雙數 (至少一個偶數，且有非0數字)
+                            digits.push(Math.floor(Math.random() * 4) * 2 + 2); // 2,4,6,8
+                            digits.push(Math.floor(Math.random() * 9) + 1);    // 1-9
+                            while(digits.length < count) {
+                                digits.push(Math.floor(Math.random() * 10)); // 0-9
+                            }
+                            digits = shuffle(digits);
+
+                            // 計算正確答案 (暴力法檢查所有組合)
+                            let possible = [];
+                            for(let i=0; i<digits.length; i++) {
+                                for(let j=0; j<digits.length; j++) {
+                                    if(i === j) continue;
+                                    if(digits[i] === 0) continue; // 首位不能為0
+                                    let num = digits[i] * 10 + digits[j];
+                                    if(num % 2 === 0) possible.push(num); // 必須是雙數
+                                }
+                            }
+                            possible.sort((a,b) => a-b);
+                            const correct = possible[0];
+
+                            q.text = `利用以下數字卡：\n${digits.join('， ')}\n組成「最小」的「兩位雙數」。`;
+                            q.correctSecond = correct;
+                            q.explanationSecond = `十位要盡量小 (不能是0)，個位要是雙數 (0,2,4,6,8)。最小的組合是 ${correct}。`;
+
+                            // 選項
+                            let opts = new Set([correct]);
+                            if (possible.length > 1) opts.add(possible[possible.length-1]); // 最大雙數
+                            while(opts.size < 4) opts.add(correct + Math.floor(Math.random() * 20) + 1);
+                            q.secondOptions = shuffle(Array.from(opts));
                         }
                         break;
                     }
+
                     case QUESTION_TYPES.HIDDEN_EACH: {
                         const item = Math.random() > 0.5 ? '三文治' : '糖果';
                         const n1 = Math.floor(Math.random() * 3) + 3;
@@ -298,7 +347,7 @@
                         else { showM = 5; ansText = `${h} 時多些`; }
                         
                         q.text = `圖中時鐘顯示的時間是？`;
-                        q.fuzzyTime = { h, m: showM }; // 傳遞給 ClockFace
+                        q.fuzzyTime = { h, m: showM }; 
                         q.correctSecond = ansText;
                         q.secondOptions = shuffle([`${h} 時半`, `${h} 時半多些`, `${h} 時多些`, `${h+1} 時正`]);
                         q.explanationSecond = `分針指著 ${showM} 分，${scenario < 0.4 ? '過了 6 字，所以是「半多些」' : scenario < 0.7 ? '正正指著 6，是「半」' : '剛過 12 字，是「多些」'}。`;
@@ -321,14 +370,12 @@
             const handleAnswer = (ans) => {
                 if (selectedAnswer !== null && subStep === 'second') return;
                 
-                // 處理兩步式題目 (原有的比較題 & 直式題)
                 if (subStep === 'first') {
                     const ok = ans === currentQuestion.correctFirst;
                     setTempIsFirstCorrect(ok); setSelectedAnswer(ans);
                     if (ok) { setTimeout(() => { setSubStep('second'); setSelectedAnswer(null); }, 600); }
                     else { finish(ans, false); }
                 } 
-                // 處理所有題目的最終答案
                 else {
                     if (currentQuestion.type === QUESTION_TYPES.TIME_DRAW) {
                         const ok = drawHour === currentQuestion.targetH && drawMinute === currentQuestion.targetM;
@@ -365,8 +412,8 @@
                             <div className="flex items-center gap-4">
                                 <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg shadow-indigo-100"><Icon.Search size={24} /></div>
                                 <div>
-                                    <h1 className="text-2xl font-black text-slate-800 leading-none">數學偵探 V7.0</h1>
-                                    <p className="text-xs font-bold text-slate-400 mt-1 uppercase">Jeremy 究極完全版</p>
+                                    <h1 className="text-2xl font-black text-slate-800 leading-none">數學偵探 V7.1</h1>
+                                    <p className="text-xs font-bold text-slate-400 mt-1 uppercase">Jeremy 數字卡片修正版</p>
                                 </div>
                             </div>
                             {currentStep === 'quiz' && (
@@ -382,8 +429,8 @@
                                 <h2 className="mb-4 text-3xl font-black text-slate-800">全能數學特訓</h2>
                                 <p className="text-slate-500 font-bold mb-10 leading-relaxed text-lg">
                                     🕵️‍♂️ 20 題綜合案件<br/>
-                                    包含了：原有挑戰 + 陷阱特訓。<br/>
-                                    Jeremy，今次一定無敵！
+                                    包含了：數字卡片、陷阱特訓、各類邏輯。<br/>
+                                    Jeremy，看清楚阿拉伯數字！
                                 </p>
                                 <button onClick={startQuiz} className="w-full rounded-[2rem] bg-indigo-600 py-6 text-3xl font-black text-white shadow-2xl hover:bg-indigo-700 transition-all active:scale-95">
                                     開始搜查
@@ -404,9 +451,8 @@
                                         )}
                                     </div>
                                     
-                                    <h3 className="mb-8 text-2xl font-black text-slate-900 leading-snug">{currentQuestion.text}</h3>
+                                    <h3 className="mb-8 text-2xl font-black text-slate-900 leading-snug whitespace-pre-line">{currentQuestion.text}</h3>
 
-                                    {/* --- 顯示邏輯區域 --- */}
                                     {currentQuestion.type === QUESTION_TYPES.VERTICAL_FILL && (
                                         <VerticalDisplay data={currentQuestion.vertical} subStep={subStep} selectedAnswer={selectedAnswer} />
                                     )}
@@ -437,7 +483,6 @@
                                         </div>
                                     )}
 
-                                    {/* --- 按鈕區域 --- */}
                                     <div className="mt-8 space-y-8">
                                         {subStep === 'first' && currentQuestion.firstOptions ? (
                                             <div className="animate-in slide-in-from-left-6 duration-500">
