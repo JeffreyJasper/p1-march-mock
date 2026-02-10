@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Jeremy 數學偵探 V7.1 - 數字卡片修正版</title>
+    <title>Jeremy 數學偵探 V7.2 - 時間特訓增強版</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -36,20 +36,22 @@
             RefreshCcw: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></svg>,
             ChevronRight: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
             Clock: ({size=20}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-            MoveRight: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/></svg>
+            MoveRight: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8L22 12L18 16"/><path d="M2 12H22"/></svg>,
+            Plane: ({size=24}) => <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h20"/><path d="M13 2l9 10-9 10"/><path d="M2 12l5-5m0 10l-5-5"/></svg> // Actually Arrow, using for direction
         };
 
         const QUESTION_TYPES = {
             COMPARISON: '比較邏輯',
             FILTERING: '資訊篩選',
             VERTICAL_FILL: '直式填格',
-            TIME_APP: '時鐘應用',
+            TIME_APP: '生活時間',     // 升級：包含趕巴士 & 上下班計算
             TIME_DRAW: '互動撥鐘',
             HORIZONTAL: '橫式陷阱',      
             CARD_SORT: '數字卡片',       
             HIDDEN_EACH: '「各」字應用',   
             PRICE_LOGIC: '價錢推理',     
-            TIME_FUZZY: '時間描述'       
+            TIME_FUZZY: '時間描述',
+            TIME_DELAY: '行程延誤'     // 新增：飛機延誤題 (兩步)
         };
 
         const CATEGORIES = {
@@ -58,7 +60,8 @@
             CLOTHING: ['長袖衫', '短袖衫', '長褲', '短褲', '外套']
         };
 
-        const TOTAL_QUESTIONS = 20;
+        // 增加題數以容納新題型 (確保每種都有機會出)
+        const TOTAL_QUESTIONS = 24;
 
         const VerticalDisplay = ({ data, subStep, selectedAnswer }) => (
             <div className="flex justify-center my-8 font-mono scale-110">
@@ -81,12 +84,12 @@
             </div>
         );
 
-        const ClockFace = ({ h, m, color = "#1e293b" }) => {
+        const ClockFace = ({ h, m, color = "#1e293b", size = 180 }) => {
             const hourAngle = (h * 30) + (m * 0.5);
             const minuteAngle = m * 6;
             return (
                 <div className="flex justify-center my-6">
-                    <svg width="180" height="180" viewBox="0 0 200 200" className="drop-shadow-2xl">
+                    <svg width={size} height={size} viewBox="0 0 200 200" className="drop-shadow-xl">
                         <circle cx="100" cy="100" r="95" fill="white" stroke={color} strokeWidth="5" />
                         {[...Array(12)].map((_, i) => (
                             <text key={i} x={100 + 72 * Math.sin((i+1)*Math.PI/6)} y={105 - 72 * Math.cos((i+1)*Math.PI/6)} textAnchor="middle" className="font-black text-xl" fill={color}>{i+1}</text>
@@ -121,13 +124,17 @@
             const initSequence = () => {
                 const types = Object.values(QUESTION_TYPES);
                 let seq = [];
-                types.forEach(type => { seq.push(type, type); });
-                return shuffle(seq);
+                // 盡量平均分配，某些類型加重比例
+                types.forEach(type => { seq.push(type); }); // 11 types
+                types.forEach(type => { seq.push(type); }); // 22 types
+                seq.push(QUESTION_TYPES.TIME_DELAY); // 加強新題型
+                seq.push(QUESTION_TYPES.TIME_APP);   // 加強新題型
+                return shuffle(seq).slice(0, TOTAL_QUESTIONS);
             };
 
             const generateQuestion = (index, sequence) => {
                 const type = sequence[index];
-                const names = shuffle(['小明', '子言', '小玲', '家嘉', '子賢', '小丁']);
+                const names = shuffle(['小明', '子言', '小玲', '家嘉', '子賢', '安琪']); // 增加安琪
                 let q = { type, id: Date.now() };
 
                 setSubStep('second'); 
@@ -186,20 +193,100 @@
                         setSubStep('first');
                         break;
                     }
+                    
+                    // --- 升級：生活時間 (TIME_APP) ---
                     case QUESTION_TYPES.TIME_APP: {
-                        const startH = Math.floor(Math.random() * 4) + 7;
-                        const duration = Math.floor(Math.random() * 3) + 2;
-                        const finishH = startH + duration;
-                        const busH = finishH + (Math.random() > 0.5 ? 1 : -1);
-                        const canCatch = busH >= finishH;
-                        q.startH = startH; q.duration = duration;
-                        q.busH = busH > 12 ? busH - 12 : busH; q.busM = 0;
-                        q.correctSecond = canCatch ? "可以" : "不可以";
-                        q.text = `${names[0]}在上午 ${startH} 時返學，${duration} 小時後放學。請問放學後能否乘搭這班巴士？`;
-                        q.secondOptions = ["可以", "不可以"];
-                        q.explanationSecond = `放學時間是 ${finishH > 12 ? finishH - 12 : finishH} 時，巴士在 ${q.busH} 時開出。`;
+                        const isWorkScenario = Math.random() > 0.5; // 50% 機率是新題目
+                        
+                        if (isWorkScenario) {
+                            // 新增：工時計算題 (安琪媽媽上班)
+                            const startH = Math.floor(Math.random() * 4) + 7; // 7, 8, 9, 10
+                            const duration = Math.floor(Math.random() * 3) + 8; // 8, 9, 10 小時
+                            // 小一通常以12小時制思考：8 + 9 = 17 -> 5pm
+                            const endH24 = startH + duration;
+                            const endH12 = endH24 > 12 ? endH24 - 12 : endH24;
+                            
+                            q.subType = 'work';
+                            q.startH = startH; 
+                            q.duration = duration;
+                            q.text = `${names[0]}的媽媽在上午 ${startH} 時到達公司上班，${duration} 小時後下班。她在幾多時下班？`;
+                            q.correctSecond = `${endH12} 時`;
+                            
+                            // 選項
+                            const opts = new Set([`${endH12} 時`]);
+                            opts.add(`${Math.abs(duration - startH)} 時`); // 錯誤減法
+                            opts.add(`${endH12 + 1} 時`);
+                            opts.add(`${endH12 - 1} 時`);
+                            q.secondOptions = shuffle(Array.from(opts));
+                            q.explanationSecond = `簡單加法：上午 ${startH} 時加 ${duration} 小時 = ${endH24} 時，即下午 ${endH12} 時。`;
+                        } else {
+                            // 原有：趕巴士題目
+                            const startH = Math.floor(Math.random() * 4) + 7;
+                            const duration = Math.floor(Math.random() * 3) + 2;
+                            const finishH = startH + duration;
+                            const busH = finishH + (Math.random() > 0.5 ? 1 : -1);
+                            const canCatch = busH >= finishH;
+                            q.subType = 'bus';
+                            q.startH = startH; q.duration = duration;
+                            q.busH = busH > 12 ? busH - 12 : busH; q.busM = 0;
+                            q.correctSecond = canCatch ? "可以" : "不可以";
+                            q.text = `${names[0]}在上午 ${startH} 時返學，${duration} 小時後放學。請問放學後能否乘搭這班巴士？`;
+                            q.secondOptions = ["可以", "不可以"];
+                            q.explanationSecond = `放學時間是 ${finishH > 12 ? finishH - 12 : finishH} 時，巴士在 ${q.busH} 時開出。`;
+                        }
                         break;
                     }
+
+                    // --- 新增：行程延誤 (TIME_DELAY) ---
+                    case QUESTION_TYPES.TIME_DELAY: {
+                        // 設定：爸爸搭飛機 / 火車
+                        const vehicle = Math.random() > 0.5 ? '飛機' : '火車';
+                        const dest = Math.random() > 0.5 ? '上海' : '北京';
+                        const depH = Math.floor(Math.random() * 9) + 1; // 1-9 時
+                        const depM = Math.random() > 0.5 ? 30 : 0;      // 0 或 30 分
+                        const duration = Math.floor(Math.random() * 3) + 2; // 2-4 小時
+                        
+                        // 計算原定到達
+                        let schedM = depM;
+                        let schedH = depH + duration; 
+                        
+                        // 實際到達 (遲 1-2 小時 或 早 1 小時)
+                        const diff = Math.random() > 0.6 ? (Math.random() > 0.5 ? 2 : 1) : -1; // +1, +2, -1
+                        let actualH = schedH + diff;
+                        
+                        q.depClock = { h: depH, m: depM };
+                        q.duration = duration;
+                        q.text = `爸爸乘坐${vehicle}前往${dest}。${vehicle}原定在右邊的時間起飛，飛行時間是 ${duration} 小時。`;
+                        
+                        // 第一步：問原定到達時間
+                        const formatTime = (h, m) => `${h}:${m===0?'00':'30'}`;
+                        q.correctFirst = formatTime(schedH, schedM);
+                        
+                        // 生成第一步選項
+                        const opts1 = new Set([q.correctFirst]);
+                        opts1.add(formatTime(schedH + 1, schedM));
+                        opts1.add(formatTime(schedH - 1, schedM));
+                        opts1.add(formatTime(schedH, schedM === 0 ? 30 : 0));
+                        q.firstOptions = shuffle(Array.from(opts1));
+                        q.explanationFirst = `起飛時間 ${formatTime(depH, depM)}，加上 ${duration} 小時，原定 ${q.correctFirst} 到達。`;
+
+                        // 第二步：問遲/早
+                        const actualTimeStr = formatTime(actualH, schedM); // 分鐘通常不變簡化題目，或跟隨題目設定
+                        q.textSecond = `${vehicle}最終在 ${actualTimeStr} 到達${dest}，比原定時間...`;
+                        q.correctSecond = diff > 0 ? `遲了 ${diff} 小時` : `早了 ${Math.abs(diff)} 小時`;
+                        
+                        q.secondOptions = shuffle([
+                            `遲了 ${Math.abs(diff)} 小時`,
+                            `早了 ${Math.abs(diff)} 小時`,
+                            `遲了 ${Math.abs(diff)+1} 小時`,
+                            `準時到達`
+                        ]);
+                        q.explanationSecond = `原定 ${q.correctFirst}，實際 ${actualTimeStr}。${diff > 0 ? '遲' : '早'}了 ${Math.abs(diff)} 小時。`;
+                        
+                        setSubStep('first');
+                        break;
+                    }
+
                     case QUESTION_TYPES.TIME_DRAW: {
                         const h = Math.floor(Math.random() * 12) + 1;
                         const isHalf = Math.random() > 0.5;
@@ -241,38 +328,24 @@
                         q.secondOptions = shuffle([q.correctSecond, q.correctSecond - 10, q.correctSecond + 2, (t1-t2)*10 + (o1+o2)]);
                         break;
                     }
-                    
-                    // --- 修改後的數字卡片題型 ---
                     case QUESTION_TYPES.CARD_SORT: {
-                        // 1. 決定卡片數量 (4 至 8 張)
-                        const count = Math.floor(Math.random() * 5) + 4; // 4, 5, 6, 7, 8
-                        
-                        // 2. 決定題型：選數 (Selection) 或 組數 (Formation)
+                        const count = Math.floor(Math.random() * 5) + 4; 
                         const subType = Math.random() > 0.5 ? 'selection' : 'formation';
 
                         if (subType === 'selection') {
-                            // 題目：從列表中選出最大的兩位單數
                             let candidates = [];
-                            // 確保至少有一個答案 (兩位單數)
-                            const target = Math.floor(Math.random() * 40) * 2 + 11; // 11-89 的單數
+                            const target = Math.floor(Math.random() * 40) * 2 + 11; 
                             candidates.push(target);
-                            
-                            // 填充其他干擾數字 (純阿拉伯數字)
                             while(candidates.length < count) {
                                 let n = Math.floor(Math.random() * 99) + 1;
                                 if (!candidates.includes(n)) candidates.push(n);
                             }
                             candidates = shuffle(candidates);
-                            
-                            // 計算正確答案
                             const valids = candidates.filter(n => n >= 10 && n % 2 !== 0);
                             const correct = Math.max(...valids);
-                            
                             q.text = `請從以下數字卡中，選出「最大」的「兩位單數」：\n\n${candidates.join('， ')}`;
                             q.correctSecond = correct;
                             q.explanationSecond = `我們要找「兩位數」而且是「單數」。在這些數字中，${correct} 是最大的兩位單數。`;
-                            
-                            // 選項生成
                             let opts = new Set([correct]);
                             while(opts.size < 4) {
                                 let rand = candidates[Math.floor(Math.random() * candidates.length)];
@@ -282,42 +355,34 @@
                             q.secondOptions = shuffle(Array.from(opts));
 
                         } else {
-                            // 題目：用數字卡組成最小的兩位雙數
                             let digits = [];
-                            // 確保能組成雙數 (至少一個偶數，且有非0數字)
-                            digits.push(Math.floor(Math.random() * 4) * 2 + 2); // 2,4,6,8
-                            digits.push(Math.floor(Math.random() * 9) + 1);    // 1-9
+                            digits.push(Math.floor(Math.random() * 4) * 2 + 2); 
+                            digits.push(Math.floor(Math.random() * 9) + 1);    
                             while(digits.length < count) {
-                                digits.push(Math.floor(Math.random() * 10)); // 0-9
+                                digits.push(Math.floor(Math.random() * 10)); 
                             }
                             digits = shuffle(digits);
-
-                            // 計算正確答案 (暴力法檢查所有組合)
                             let possible = [];
                             for(let i=0; i<digits.length; i++) {
                                 for(let j=0; j<digits.length; j++) {
                                     if(i === j) continue;
-                                    if(digits[i] === 0) continue; // 首位不能為0
+                                    if(digits[i] === 0) continue; 
                                     let num = digits[i] * 10 + digits[j];
-                                    if(num % 2 === 0) possible.push(num); // 必須是雙數
+                                    if(num % 2 === 0) possible.push(num); 
                                 }
                             }
                             possible.sort((a,b) => a-b);
                             const correct = possible[0];
-
                             q.text = `利用以下數字卡：\n${digits.join('， ')}\n組成「最小」的「兩位雙數」。`;
                             q.correctSecond = correct;
                             q.explanationSecond = `十位要盡量小 (不能是0)，個位要是雙數 (0,2,4,6,8)。最小的組合是 ${correct}。`;
-
-                            // 選項
                             let opts = new Set([correct]);
-                            if (possible.length > 1) opts.add(possible[possible.length-1]); // 最大雙數
+                            if (possible.length > 1) opts.add(possible[possible.length-1]); 
                             while(opts.size < 4) opts.add(correct + Math.floor(Math.random() * 20) + 1);
                             q.secondOptions = shuffle(Array.from(opts));
                         }
                         break;
                     }
-
                     case QUESTION_TYPES.HIDDEN_EACH: {
                         const item = Math.random() > 0.5 ? '三文治' : '糖果';
                         const n1 = Math.floor(Math.random() * 3) + 3;
@@ -412,8 +477,8 @@
                             <div className="flex items-center gap-4">
                                 <div className="bg-indigo-600 p-3 rounded-2xl text-white shadow-lg shadow-indigo-100"><Icon.Search size={24} /></div>
                                 <div>
-                                    <h1 className="text-2xl font-black text-slate-800 leading-none">數學偵探 V7.1</h1>
-                                    <p className="text-xs font-bold text-slate-400 mt-1 uppercase">Jeremy 數字卡片修正版</p>
+                                    <h1 className="text-2xl font-black text-slate-800 leading-none">數學偵探 V7.2</h1>
+                                    <p className="text-xs font-bold text-slate-400 mt-1 uppercase">Jeremy 時間特訓增強版</p>
                                 </div>
                             </div>
                             {currentStep === 'quiz' && (
@@ -428,9 +493,9 @@
                                 <Icon.Trophy className="h-24 w-24 text-amber-400 mx-auto mb-8 animate-bounce" />
                                 <h2 className="mb-4 text-3xl font-black text-slate-800">全能數學特訓</h2>
                                 <p className="text-slate-500 font-bold mb-10 leading-relaxed text-lg">
-                                    🕵️‍♂️ 20 題綜合案件<br/>
-                                    包含了：數字卡片、陷阱特訓、各類邏輯。<br/>
-                                    Jeremy，看清楚阿拉伯數字！
+                                    🕵️‍♂️ 24 題綜合案件<br/>
+                                    新增：飛機延誤、工時計算！<br/>
+                                    Jeremy，時間觀念大挑戰！
                                 </p>
                                 <button onClick={startQuiz} className="w-full rounded-[2rem] bg-indigo-600 py-6 text-3xl font-black text-white shadow-2xl hover:bg-indigo-700 transition-all active:scale-95">
                                     開始搜查
@@ -451,19 +516,46 @@
                                         )}
                                     </div>
                                     
-                                    <h3 className="mb-8 text-2xl font-black text-slate-900 leading-snug whitespace-pre-line">{currentQuestion.text}</h3>
+                                    <h3 className="mb-8 text-2xl font-black text-slate-900 leading-snug whitespace-pre-line">
+                                        {subStep === 'second' && currentQuestion.textSecond ? currentQuestion.textSecond : currentQuestion.text}
+                                    </h3>
 
                                     {currentQuestion.type === QUESTION_TYPES.VERTICAL_FILL && (
                                         <VerticalDisplay data={currentQuestion.vertical} subStep={subStep} selectedAnswer={selectedAnswer} />
                                     )}
                                     
+                                    {/* --- 顯示邏輯：生活時間 (TIME_APP) --- */}
                                     {currentQuestion.type === QUESTION_TYPES.TIME_APP && (
                                         <div className="flex flex-col items-center bg-slate-50 p-6 rounded-[2rem] border border-slate-100 mb-8">
                                             <div className="flex items-center gap-4 text-indigo-600 font-black mb-4 text-lg text-balance text-center">
                                                 <Icon.Clock size={24} /> 上午 {currentQuestion.startH}:00 <Icon.MoveRight /> {currentQuestion.duration} 小時後
                                             </div>
-                                            <ClockFace h={currentQuestion.busH} m={currentQuestion.busM} color="#dc2626" />
-                                            <span className="text-xs font-black text-red-500 mt-2 tracking-widest uppercase">↑ 巴士班次時間 ↑</span>
+                                            {currentQuestion.subType === 'bus' && (
+                                                <>
+                                                    <ClockFace h={currentQuestion.busH} m={currentQuestion.busM} color="#dc2626" />
+                                                    <span className="text-xs font-black text-red-500 mt-2 tracking-widest uppercase">↑ 巴士班次時間 ↑</span>
+                                                </>
+                                            )}
+                                            {currentQuestion.subType === 'work' && (
+                                                <div className="text-6xl font-black text-indigo-900 py-8">?</div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* --- 顯示邏輯：行程延誤 (TIME_DELAY) --- */}
+                                    {currentQuestion.type === QUESTION_TYPES.TIME_DELAY && (
+                                        <div className="flex flex-row items-center justify-center gap-8 bg-slate-50 p-6 rounded-[2rem] border border-slate-100 mb-8">
+                                            <div className="text-center">
+                                                <div className="text-xs font-black text-slate-400 uppercase mb-2">出發時間</div>
+                                                <ClockFace h={currentQuestion.depClock.h} m={currentQuestion.depClock.m} color="#0f172a" size={120} />
+                                            </div>
+                                            <div className="text-indigo-500">
+                                                <Icon.MoveRight />
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-xs font-black text-slate-400 uppercase mb-2">飛行時間</div>
+                                                <div className="text-4xl font-black text-slate-800">{currentQuestion.duration}<span className="text-lg">hr</span></div>
+                                            </div>
                                         </div>
                                     )}
 
@@ -486,7 +578,9 @@
                                     <div className="mt-8 space-y-8">
                                         {subStep === 'first' && currentQuestion.firstOptions ? (
                                             <div className="animate-in slide-in-from-left-6 duration-500">
-                                                <p className="text-[10px] font-black text-slate-400 mb-5 uppercase tracking-[0.3em] text-center">第一步：分析線索</p>
+                                                <p className="text-[10px] font-black text-slate-400 mb-5 uppercase tracking-[0.3em] text-center">
+                                                    {currentQuestion.type === QUESTION_TYPES.TIME_DELAY ? '第一步：原定到達時間' : '第一步：分析線索'}
+                                                </p>
                                                 <div className="grid grid-cols-2 gap-6">
                                                     {currentQuestion.firstOptions.map((opt, i) => (
                                                         <button key={`f-opt-${i}`} onClick={() => handleAnswer(opt)} className={`p-8 text-3xl font-black rounded-[2rem] border-4 transition-all shadow-sm ${selectedAnswer === opt ? (opt === currentQuestion.correctFirst ? 'border-green-500 bg-green-50 text-green-600' : 'border-red-500 bg-red-50 text-red-600') : 'border-slate-100 bg-slate-50 hover:border-indigo-300'}`}>{opt}</button>
@@ -519,7 +613,7 @@
                                             <div className="flex-1">
                                                 <h4 className="font-black text-2xl mb-3 text-slate-800">{isCorrect ? '破解成功！' : '偵探筆記：'}</h4>
                                                 <div className="text-slate-700 font-bold space-y-2 text-xl leading-relaxed">
-                                                    {currentQuestion.type === QUESTION_TYPES.COMPARISON && !tempIsFirstCorrect && <p className="text-rose-600 underline decoration-2">❌ 邏輯選錯了：{currentQuestion.explanationFirst}</p>}
+                                                    {(currentQuestion.type === QUESTION_TYPES.COMPARISON || currentQuestion.type === QUESTION_TYPES.TIME_DELAY) && !tempIsFirstCorrect && <p className="text-rose-600 underline decoration-2">❌ 第一步出錯了：{currentQuestion.explanationFirst}</p>}
                                                     <p>{currentQuestion.explanationSecond}</p>
                                                 </div>
                                                 <button onClick={nextQuestion} className="mt-8 w-full flex items-center justify-center gap-3 rounded-2xl bg-slate-900 py-6 text-white font-black text-2xl hover:bg-slate-800 transition-all active:scale-95 shadow-xl">
